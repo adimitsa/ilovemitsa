@@ -27,6 +27,29 @@
             clip-path: polygon(25% 0%, 75% 0%, 75% 50%, 100% 50%, 50% 100%, 0% 50%, 25% 50%);
         }
 
+        /* --- AUTO-SIZING INPUTS --- */
+        .auto-input {
+            display: block;
+            min-width: 3rem;
+            width: auto;
+            resize: none;
+            overflow: hidden;
+            white-space: pre-wrap;
+            word-break: break-word;
+            line-height: 1.4;
+            box-sizing: border-box;
+        }
+		
+		/* Update your existing .arrow-bg-clip style or add this specific override */
+		/* Ensure the arrow textarea wraps and fills the container */
+		.arrow-bg-clip textarea {
+			white-space: pre-wrap !important;
+			word-break: break-word !important;
+			display: block !important;
+			width: 100% !important;
+			min-width: 6rem !important; /* Matches your container min-width */
+		}
+
         #thread-canvas {
             pointer-events: none;
             z-index: 30;
@@ -163,7 +186,7 @@
                 let isSnapped = false;
                 if (itemData.connectedTo !== undefined && itemData.connectedTo !== "") {
                     const targetBlockIdx = parseInt(itemData.connectedTo);
-                    const $targetUnit = $(`input[data-card="${cardIdx}"][data-row="${interRowIdx}"][data-block="${targetBlockIdx}"]`).parent();
+                    const $targetUnit = $(`textarea[data-card="${cardIdx}"][data-row="${interRowIdx}"][data-block="${targetBlockIdx}"]`).parent();
                     if ($targetUnit.length) {
                         const targetOffset = $targetUnit.offset();
                         endX = targetOffset.left + $targetUnit.outerWidth() / 2;
@@ -197,7 +220,7 @@
             $hub.empty();
             dashboardCards.forEach((card, cIdx) => {
                 const isMinimized = card.isMinimized || false;
-                const $boardWrapper = $('<div></div>').addClass('w-full flex flex-col items-center space-y-3 p-6 bg-amber-50/95 rounded-2xl border border-amber-300/80 max-w-5xl relative shadow-2xl backdrop-blur-md transition-all');
+                const $boardWrapper = $('<div></div>').addClass('w-full flex flex-col items-center space-y-3 p-6 bg-amber-50/95 rounded-2xl border border-amber-300/80 relative shadow-2xl backdrop-blur-md transition-all');
                 const $boardHeaderActions = $(`
                     <div class="w-full flex justify-end px-2 mb-1">
                         <button class="toggle-card-minimize w-8 h-8 flex items-center justify-center bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-lg text-amber-900 font-bold transition active:scale-95 cursor-pointer text-xs shadow-xs"
@@ -211,17 +234,17 @@
                 card.matrixRows.forEach((rowItems, rIdx) => {
                     if (isMinimized && rIdx > 0) return;
                     const $horizontalRowFlex = $('<div></div>').addClass('flex items-stretch justify-center gap-4 w-full relative animate-in fade-in duration-150');
-                    const $layerCard = $('<div></div>').addClass('bg-white/95 rounded-xl shadow-md p-6 border border-amber-200/60 flex flex-col items-center justify-center space-y-4 w-auto min-w-[24rem] relative');
+                    const $layerCard = $('<div></div>').addClass('bg-white/95 rounded-xl shadow-md p-6 border border-amber-200/60 flex flex-col items-center justify-center space-y-4 w-full relative');
                     if (rIdx === 0) $layerCard.addClass('bg-gradient-to-br from-amber-100/60 to-orange-100/40 border-amber-300 shadow-sm');
                     const $rowContainer = $('<div></div>').addClass('flex items-center justify-center flex-wrap gap-2 py-1 w-full');
                     rowItems.forEach((item, bIdx) => {
                         let $blockMarkup;
                         if (item.type === 'function') {
-                            $blockMarkup = $(`<div class="w-40 h-11 bg-amber-400 border-2 border-amber-600 rounded-md flex items-center justify-center shadow-inner shrink-0 relative z-10"><input type="text" value="${item.text}" class="w-full text-center bg-transparent font-bold text-amber-950 border-none outline-none focus:ring-0 text-sm" data-card="${cIdx}" data-row="${rIdx}" data-block="${bIdx}"></div>`);
+                            $blockMarkup = $(`<div class="block-fill bg-amber-400 border-2 border-amber-600 rounded-md shadow-inner relative z-10 p-2 w-full"><textarea class="auto-input text-center bg-transparent font-bold text-amber-950 border-none outline-none focus:ring-0 text-sm" rows="1" data-card="${cIdx}" data-row="${rIdx}" data-block="${bIdx}">${item.text}</textarea></div>`);
                         } else if (item.type === 'rect') {
-                            $blockMarkup = $(`<div class="w-40 h-11 bg-amber-50 border-2 border-amber-200 rounded-md flex items-center justify-center shadow-inner shrink-0 relative z-10"><input type="text" value="${item.text}" class="w-full text-center bg-transparent font-bold text-amber-900 border-none outline-none focus:ring-0 text-sm" data-card="${cIdx}" data-row="${rIdx}" data-block="${bIdx}"></div>`);
+                            $blockMarkup = $(`<div class="block-fill bg-amber-50 border-2 border-amber-200 rounded-md shadow-inner shrink-0 relative z-10 p-2"><textarea class="auto-input text-center bg-transparent font-bold text-amber-900 border-none outline-none focus:ring-0 text-sm" rows="1" data-card="${cIdx}" data-row="${rIdx}" data-block="${bIdx}">${item.text}</textarea></div>`);
                         } else if (item.type === 'arrow') {
-                            $blockMarkup = $(`<div class="relative w-40 h-11 inline-block shrink-0"><div class="absolute inset-0 bg-sky-100 border-y border-sky-300/80 arrow-bg-clip z-10"></div><div class="absolute inset-0 z-20 flex items-center justify-center"><input type="text" value="${item.text}" class="w-full h-full text-center bg-transparent font-bold text-sky-900 border-none outline-none pl-6 pr-4 focus:ring-0 text-xs" data-card="${cIdx}" data-row="${rIdx}" data-block="${bIdx}"></div></div>`);
+                            $blockMarkup = $(`<div class="arrow-bg-clip bg-sky-100 border-y border-sky-300/80 shrink-0 flex items-center justify-center px-6 py-2" style="min-width:6rem"><textarea class="auto-input text-center bg-transparent font-bold text-sky-900 border-none outline-none focus:ring-0 text-xs w-full" rows="1" data-card="${cIdx}" data-row="${rIdx}" data-block="${bIdx}">${item.text}</textarea></div>`);
                         }
                         $rowContainer.append($blockMarkup);
                     });
@@ -235,7 +258,7 @@
                     }
                     $boardWrapper.append($horizontalRowFlex);
                     if (rIdx === totalRows - 1) {
-                        $boardWrapper.append($(`<div class="py-2 flex flex-col items-center justify-center gap-1.5 w-full relative z-40"><span class="text-[11px] font-bold uppercase tracking-wider text-amber-900/60 text-center">Explore organization of one level deeper</span><button class="add-row w-11 h-14 bg-amber-600 hover:bg-amber-700 btn-down-arrow-clip active:scale-95 transition cursor-pointer shadow-md" title="Explore organization of one level deeper" data-card="${cIdx}" data-row="${rIdx}"></button></div>`));
+                        $boardWrapper.append($(`<div class="py-2 flex flex-col items-center justify-center gap-1.5 w-full relative z-40"><span class="text-[11px] font-bold uppercase tracking-wider text-gray-400 text-center">Explore organization of one level deeper</span><button class="add-row w-11 h-14 bg-gray-400 hover:bg-gray-500 btn-down-arrow-clip active:scale-95 transition cursor-pointer shadow-md" title="Explore organization of one level deeper" data-card="${cIdx}" data-row="${rIdx}"></button></div>`));
                     }
                     if (rIdx < totalRows - 1 && !isMinimized) {
                         const interRowItems = card.interRows[rIdx] || [];
@@ -249,7 +272,7 @@
                                     dropdownOptionsMarkup += `<option value="${uIdx}" ${isSelected}>Connect to: [${unit.text}]</option>`;
                                 }
                             });
-                            $interRowWrapper.append($(`<div class="flex flex-col items-center space-y-1.5 bg-white p-2 rounded-xl border border-amber-200 shadow-xs shrink-0" data-output-block="true" data-card="${cIdx}" data-interrow="${rIdx}" data-interidx="${interIdx}"><select class="thread-target-select text-[11px] font-medium bg-amber-50 border border-amber-200 text-amber-900 rounded px-1.5 py-0.5 max-w-[10rem] outline-none focus:border-amber-500 transition" data-card="${cIdx}" data-interrow="${rIdx}" data-interidx="${interIdx}">${dropdownOptionsMarkup}</select><div class="relative w-40 h-14 inline-block shrink-0 v-arrow-up-bg-clip"><div class="absolute inset-0 bg-emerald-100/90 border border-emerald-300 z-10"></div><div class="absolute inset-0 z-20 flex items-end pb-2 justify-center"><input type="text" value="${interItem.text}" class="w-full text-center bg-transparent font-bold text-emerald-900 border-none outline-none px-3 focus:ring-0 text-xs" data-card="${cIdx}" data-interrow="${rIdx}" data-interidx="${interIdx}"></div></div></div>`));
+                            $interRowWrapper.append($(`<div class="flex flex-col items-center space-y-1.5 bg-white p-2 rounded-xl border border-amber-200 shadow-xs shrink-0" data-output-block="true" data-card="${cIdx}" data-interrow="${rIdx}" data-interidx="${interIdx}"><select class="thread-target-select text-[11px] font-medium bg-amber-50 border border-amber-200 text-amber-900 rounded px-1.5 py-0.5 max-w-[10rem] outline-none focus:border-amber-500 transition" data-card="${cIdx}" data-interrow="${rIdx}" data-interidx="${interIdx}">${dropdownOptionsMarkup}</select><div class="block-fill v-arrow-up-bg-clip bg-emerald-100/90 border border-emerald-300 flex items-center justify-center px-4 pt-5 pb-2"><textarea class="auto-input text-center bg-transparent font-bold text-emerald-900 border-none outline-none focus:ring-0 text-xs" rows="1" data-card="${cIdx}" data-interrow="${rIdx}" data-interidx="${interIdx}">${interItem.text}</textarea></div></div>`));
                         });
                         $interRowWrapper.append($(`<button class="add-output-arrow w-9 h-11 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 btn-up-arrow-clip active:scale-95 transition cursor-pointer self-center" title="Add Upward Output" data-card="${cIdx}" data-interrow="${rIdx}"></button>`));
                         $boardWrapper.append($interRowWrapper);
@@ -262,15 +285,17 @@
 
         $(document).ready(function() {
             renderDashboard();
-            $(window).on('resize scroll', drawThreads);
+            setTimeout(resizeAll, 0);
             $('#boards-hub').on('click', '.toggle-card-minimize', function() {
                 const targetCardIdx = $(this).data('card');
                 dashboardCards[targetCardIdx].isMinimized = !dashboardCards[targetCardIdx].isMinimized;
                 renderDashboard();
+                setTimeout(resizeAll, 0);
             });
             $('#global-expand-all').on('click', function() {
                 dashboardCards.forEach(card => card.isMinimized = false);
                 renderDashboard();
+                setTimeout(resizeAll, 0);
             });
             $('#boards-hub').on('click', '.add-row', function() {
                 activeDialogContext = { card: $(this).data('card'), row: $(this).data('row') };
@@ -283,6 +308,7 @@
                 $('#prediction-modal').addClass('hidden');
                 activeDialogContext = null;
                 renderDashboard();
+                setTimeout(resizeAll, 0);
             });
             $('#submit-unfamiliar-btn').on('click', function() {
                 if (!activeDialogContext) return;
@@ -292,12 +318,50 @@
                 $('#prediction-modal').addClass('hidden');
                 activeDialogContext = null;
                 renderDashboard();
+                setTimeout(resizeAll, 0);
             });
             $('#boards-hub').on('change', '.thread-target-select', function() {
                 dashboardCards[$(this).data('card')].interRows[$(this).data('interrow')][$(this).data('interidx')].connectedTo = $(this).val();
                 drawThreads(); 
             });
-            $('#boards-hub').on('keyup', 'input[type="text"]:not([data-interrow])', function() {
+
+            const $mirror = $('#input-mirror');
+			function autoResize(el) {
+				const $el = $(el);
+				
+				// Reset height to get accurate scrollHeight
+				el.style.height = 'auto';
+				
+				// If it's inside an arrow or block-fill, ensure width fills the container
+				if ($el.closest('.arrow-bg-clip').length || $el.closest('.block-fill').length) {
+					el.style.width = '100%';
+				} else {
+					// Fallback for standalone inputs
+					const mirror = $('#input-mirror');
+					const cs = window.getComputedStyle(el);
+					mirror.css({
+						fontFamily: cs.fontFamily,
+						fontSize: cs.fontSize,
+						fontWeight: cs.fontWeight,
+						padding: cs.padding,
+					});
+					mirror.text(el.value || el.placeholder || '');
+					el.style.width = Math.max(48, mirror[0].scrollWidth + 10) + 'px';
+				}
+
+				// Set height based on content
+				el.style.height = el.scrollHeight + 'px';
+				
+				// Trigger thread redraw
+				setTimeout(drawThreads, 10);
+			}
+            function resizeAll() {
+                document.querySelectorAll('textarea.auto-input').forEach(autoResize);
+            }
+            $('#boards-hub').on('input', 'textarea.auto-input', function() {
+                autoResize(this);
+            });
+            $('#boards-hub').on('keyup', 'textarea:not([data-interrow])', function() {
                 const c = $(this).data('card');
                 const r = $(this).data('row');
                 dashboardCards[c].matrixRows[r][$(this).data('block')].text = $(this).val(); 
@@ -314,24 +378,28 @@
                 });
                 setTimeout(drawThreads, 10);
             });
-            $('#boards-hub').on('keyup', 'input[type="text"][data-interrow]', function() {
+            $('#boards-hub').on('keyup', 'textarea[data-interrow]', function() {
                 dashboardCards[$(this).data('card')].interRows[$(this).data('interrow')][$(this).data('interidx')].text = $(this).val();
             });
             $('#boards-hub').on('click', '.add-output-arrow', function() {
                 dashboardCards[$(this).data('card')].interRows[$(this).data('interrow')].push({ type: "up-arrow", text: "output", connectedTo: "" });
                 renderDashboard();
+                setTimeout(resizeAll, 0);
             });
             $('#boards-hub').on('click', '.add-rect', function() {
                 dashboardCards[$(this).data('card')].matrixRows[$(this).data('row')].push({ type: "rect", text: "functional unit" });
                 renderDashboard();
+                setTimeout(resizeAll, 0);
             });
             $('#boards-hub').on('click', '.add-arrow', function() {
                 dashboardCards[$(this).data('card')].matrixRows[$(this).data('row')].push({ type: "arrow", text: "process" });
                 renderDashboard();
+                setTimeout(resizeAll, 0);
             });
             $('#add-card-btn').on('click', function() {
                 dashboardCards.push({ matrixRows: [ [ { type: "function", text: "Function" } ] ], interRows: [], rowPredictions: {}, isMinimized: false });
                 renderDashboard();
+                setTimeout(resizeAll, 0);
             });
             $('#export-json-btn').on('click', function() {
                 const outputPayload = { project: "Structure", exportedAt: new Date().toISOString(), dashboardCards: dashboardCards };
@@ -354,6 +422,7 @@
                         if (importedData && Array.isArray(importedData.dashboardCards)) {
                             dashboardCards = importedData.dashboardCards;
                             renderDashboard();
+                            setTimeout(resizeAll, 0);
                         }
                     } catch (err) { alert("Invalid JSON file"); }
                 };
