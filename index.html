@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Layer Architecture - Collapsible Golden Dashboards</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    
+    <style>
+        /* --- BLOCK LAYOUT CANVAS GEOMETRIES --- */
+        .arrow-bg-clip {
+            clip-path: polygon(0% 0%, calc(100% - 15px) 0%, 100% 50%, calc(100% - 15px) 100%, 0% 100%, 15px 50%);
+        }
+        .v-arrow-up-bg-clip {
+            clip-path: polygon(50% 0%, 100% 15px, 100% 100%, 0% 100%, 0% 15px);
+        }
+
+        /* --- BUTTON SHAPES --- */
+        .btn-side-arrow-clip {
+            clip-path: polygon(0% 20%, 60% 20%, 60% 0%, 100% 50%, 60% 100%, 60% 80%, 0% 80%);
+        }
+        .btn-up-arrow-clip {
+            clip-path: polygon(50% 0%, 100% 50%, 75% 50%, 75% 100%, 25% 100%, 25% 50%, 0% 50%);
+        }
+        .btn-down-arrow-clip {
+            clip-path: polygon(25% 0%, 75% 0%, 75% 50%, 100% 50%, 50% 100%, 0% 50%, 25% 50%);
+        }
+
+        /* Set to z-30 to bring threads completely over the top of cards while allowing dropdown interactions */
+        #thread-canvas {
+            pointer-events: none;
+            z-index: 30;
+        }
+
+        /* --- GREY-BLACK INFINITE 3D CUBE SYSTEM (MOST BOTTOM LAYER) --- */
+        #isometric-background-cube {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            background-color: #111116;
+            background-image: 
+                linear-gradient(30deg, #1f1f24 12%, transparent 12.5%, transparent 87%, #1f1f24 87.5%, #1f1f24),
+                linear-gradient(150deg, #1f1f24 12%, transparent 12.5%, transparent 87%, #1f1f24 87.5%, #1f1f24),
+                linear-gradient(30deg, #1f1f24 12%, transparent 12.5%, transparent 87%, #1f1f24 87.5%, #1f1f24),
+                linear-gradient(150deg, #1f1f24 12%, transparent 12.5%, transparent 87%, #1f1f24 87.5%, #1f1f24),
+                linear-gradient(60deg, #2a2a32 25%, transparent 25.5%, transparent 75%, #2a2a32 75.5%, #2a2a32),
+                linear-gradient(60deg, #2a2a32 25%, transparent 25.5%, transparent 75%, #2a2a32 75.5%, #2a2a32);
+            background-size: 80px 140px;
+            background-position: 0 0, 0 0, 40px 70px, 40px 70px, 0 0, 40px 70px;
+            opacity: 0.95;
+        }
+    </style>
+</head>
+<body class="font-sans min-h-screen p-8 text-gray-800 space-y-8 relative overflow-x-hidden">
+
+    <div id="isometric-background-cube"></div>
+
+    <canvas id="thread-canvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+
+    <div class="max-w-6xl mx-auto space-y-8 flex flex-col items-center relative z-10">
+        
+        <div class="bg-amber-50/95 rounded-xl shadow-2xl p-6 border border-amber-200/60 w-full max-w-5xl backdrop-blur-md flex items-center justify-between">
+            <div class="w-24"></div> <div class="text-center flex-1">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-amber-800/70 mb-1">Reveal functioning of</h3>
+                <input type="text" value="Structure" 
+                       class="w-full max-w-md text-2xl font-black border-b-2 border-dashed border-amber-400 focus:border-amber-600 outline-none pb-1 text-center text-amber-950 transition-colors bg-transparent">
+            </div>
+            <button id="global-expand-all" 
+                    class="px-3 py-2 bg-amber-500 hover:bg-amber-600 border border-amber-400 text-amber-950 font-black rounded-lg text-xs tracking-wider transition active:scale-95 shadow-md flex items-center gap-1 cursor-pointer">
+                <span>➕</span> Expand All
+            </button>
+        </div>
+
+        <div id="boards-hub" class="w-full space-y-12 flex flex-col items-center">
+            </div>
+
+        <div class="w-full flex items-center justify-center pt-4 border-t border-amber-400/30 max-w-5xl">
+            <button id="add-card-btn" 
+                    class="w-14 h-14 flex items-center justify-center bg-amber-500 hover:bg-amber-600 border-2 border-amber-400 text-amber-950 rounded-xl font-black shadow-2xl active:transform active:scale-95 transition cursor-pointer text-xl"
+                    title="Create entirely separate function board structure">
+                <span>➕</span>
+            </button>
+        </div>
+
+    </div>
+
+    <div id="prediction-modal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center hidden backdrop-blur-xs">
+        <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-amber-100 space-y-5 m-4">
+            <div class="space-y-1">
+                <span class="text-xs font-bold tracking-wider text-amber-600 uppercase">System Analysis</span>
+                <h2 class="text-lg font-bold text-amber-950">Predict the behaviour under special and general circumstances.</h2>
+            </div>
+            
+            <textarea id="modal-prediction-input" rows="4" 
+                      class="w-full border border-amber-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition resize-none placeholder-gray-400 font-medium"
+                      placeholder="Type your architectural behavioral conditions and side-effects here..."></textarea>
+            
+            <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                <button id="submit-familiar-btn" 
+                        class="flex-1 px-4 py-3 text-left text-xs bg-amber-50 hover:bg-amber-100/80 border border-amber-200 font-semibold rounded-xl text-amber-900 active:scale-98 transition cursor-pointer">
+                    💡 It looks familiar now, no need to reveal more.
+                </button>
+                <button id="submit-unfamiliar-btn" 
+                        class="flex-1 px-4 py-3 text-left text-xs bg-amber-600 hover:bg-amber-700 font-semibold rounded-xl text-white active:scale-98 transition cursor-pointer shadow-md shadow-amber-700/20">
+                    🔍 Still looks unfamiliar. Lets reveal one level deeper.
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Multi-Board Dataset Tracker
+        let dashboardCards = [
+            {
+                matrixRows: [
+                    [ { type: "function", text: "Function" } ]
+                ],
+                interRows: [],
+                rowPredictions: {},
+                isMinimized: false 
+            }
+        ];
+
+        // Active State Dialog Register Targets
+        let activeDialogContext = null;
+
+        // --- DIRECT FOREGROUND THREAD DRAWING ENGINE ---
+        function drawThreads() {
+            const canvas = document.getElementById('thread-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = $(document).width();
+            canvas.height = $(document).height();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = '#d97706'; 
+            ctx.lineWidth = 6.0;         
+            ctx.lineCap = 'round';
+
+            $('div[data-output-block]').each(function() {
+                const $outputBlock = $(this);
+                const cardIdx = $outputBlock.data('card');
+                const interRowIdx = $outputBlock.data('interrow');
+                const interIdx = $outputBlock.data('interidx');
+
+                if (dashboardCards[cardIdx]?.isMinimized) return;
+
+                const itemData = dashboardCards[cardIdx]?.interRows[interRowIdx]?.[interIdx];
+                if (!itemData) return;
+
+                const arrowEl = $outputBlock.find('.v-arrow-up-bg-clip');
+                if (!arrowEl.length) return;
+                const arrowOffset = arrowEl.offset();
+                const startX = arrowOffset.left + arrowEl.outerWidth() / 2;
+                const startY = arrowOffset.top;
+
+                let endX, endY;
+                let isSnapped = false;
+
+                if (itemData.connectedTo !== undefined && itemData.connectedTo !== "") {
+                    const targetBlockIdx = parseInt(itemData.connectedTo);
+                    const $targetUnit = $(`input[data-card="${cardIdx}"][data-row="${interRowIdx}"][data-block="${targetBlockIdx}"]`).parent();
+                    
+                    if ($targetUnit.length) {
+                        const targetOffset = $targetUnit.offset();
+                        endX = targetOffset.left + $targetUnit.outerWidth() / 2;
+                        endY = targetOffset.top + $targetUnit.outerHeight();
+                        isSnapped = true;
+                    }
+                }
+
+                if (!isSnapped) {
+                    const threadLength = 65;
+                    endX = startX - 8; 
+                    endY = startY - threadLength;
+                }
+
+                const controlOffsetY = Math.abs(startY - endY) * 0.6;
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                
+                if (isSnapped) {
+                    ctx.bezierCurveTo(startX, startY - controlOffsetY, endX, endY + controlOffsetY, endX, endY);
+                } else {
+                    ctx.bezierCurveTo(startX + 15, startY - 20, startX - 20, startY - 45, endX, endY);
+                }
+                ctx.stroke();
+
+                ctx.fillStyle = '#d97706';
+                ctx.beginPath();
+                ctx.arc(endX, endY, 6.5, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+        }
+
+        // Core Render Matrix Engine
+        function renderDashboard() {
+            const $hub = $('#boards-hub');
+            $hub.empty();
+
+            dashboardCards.forEach((card, cIdx) => {
+                const isMinimized = card.isMinimized || false;
+
+                // Light golden architecture containers
+                const $boardWrapper = $('<div></div>')
+                    .addClass('w-full flex flex-col items-center space-y-3 p-6 bg-amber-50/95 rounded-2xl border border-amber-300/80 max-w-5xl relative shadow-2xl backdrop-blur-md transition-all');
+
+                // Isolated collapse controls inside each individual dashboard block header line
+                const $boardHeaderActions = $(`
+                    <div class="w-full flex justify-end px-2 mb-1">
+                        <button class="toggle-card-minimize w-8 h-8 flex items-center justify-center bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-lg text-amber-900 font-bold transition active:scale-95 cursor-pointer text-xs shadow-xs"
+                                data-card="${cIdx}" title="Collapse/Expand this specific board structure">
+                            <span>${isMinimized ? '➕' : '➖'}</span>
+                        </button>
+                    </div>
+                `);
+                $boardWrapper.append($boardHeaderActions);
+
+                const totalRows = card.matrixRows.length;
+
+                card.matrixRows.forEach((rowItems, rIdx) => {
+                    
+                    // If dashboard card item state matches closed/minimized: Hide elements under row index 0
+                    if (isMinimized && rIdx > 0) return;
+
+                    const $horizontalRowFlex = $('<div></div>')
+                        .addClass('flex items-stretch justify-center gap-4 w-full relative animate-in fade-in duration-150');
+
+                    const $layerCard = $('<div></div>')
+                        .addClass('bg-white/95 rounded-xl shadow-md p-6 border border-amber-200/60 flex flex-col items-center justify-center space-y-4 w-auto min-w-[24rem] relative');
+
+                    if (rIdx === 0) {
+                        $layerCard.addClass('bg-gradient-to-br from-amber-100/60 to-orange-100/40 border-amber-300 shadow-sm');
+                    }
+
+                    const $rowContainer = $('<div></div>')
+                        .addClass('flex items-center justify-center flex-wrap gap-2 py-1 w-full');
+
+                    rowItems.forEach((item, bIdx) => {
+                        let $blockMarkup;
+                        
+                        if (item.type === 'function') {
+                            $blockMarkup = $(`
+                                <div class="w-40 h-11 bg-amber-400 border-2 border-amber-600 rounded-md flex items-center justify-center shadow-inner shrink-0 relative z-10">
+                                    <input type="text" value="${item.text}" 
+                                           class="w-full text-center bg-transparent font-bold text-amber-950 border-none outline-none focus:ring-0 text-sm"
+                                           data-card="${cIdx}" data-row="${rIdx}" data-block="${bIdx}">
+                                </div>
+                            `);
+                        } else if (item.type === 'rect') {
+                            $blockMarkup = $(`
+                                <div class="w-40 h-11 bg-amber-50 border-2 border-amber-200 rounded-md flex items-center justify-center shadow-inner shrink-0 relative z-10">
+                                    <input type="text" value="${item.text}" 
+                                           class="w-full text-center bg-transparent font-bold text-amber-900 border-none outline-none focus:ring-0 text-sm"
+                                           data-card="${cIdx}" data-row="${rIdx}" data-block="${bIdx}">
+                                </div>
+                            `);
+                        } else if (item.type === 'arrow') {
+                            $blockMarkup = $(`
+                                <div class="relative w-40 h-11 inline-block shrink-0">
+                                    <div class="absolute inset-0 bg-sky-100 border-y border-sky-300/80 arrow-bg-clip z-10"></div>
+                                    <div class="absolute inset-0 z-20 flex items-center justify-center">
+                                        <input type="text" value="${item.text}" 
+                                               class="w-full h-full text-center bg-transparent font-bold text-sky-900 border-none outline-none pl-6 pr-4 focus:ring-0 text-xs"
+                                               data-card="${cIdx}" data-row="${rIdx}" data-block="${bIdx}">
+                                    </div>
+                                </div>
+                            `);
+                        }
+                        $rowContainer.append($blockMarkup);
+                    });
+
+                    if (rIdx > 0) {
+                        const $controlGroup = $(`
+                            <div class="flex items-center gap-2 ml-2 shrink-0">
+                                <button class="add-rect w-9 h-9 flex items-center justify-center bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-md shadow-xs active:scale-95 transition cursor-pointer p-1" 
+                                        title="Add Functional Unit" data-card="${cIdx}" data-row="${rIdx}">
+                                    <img src="https://img.icons8.com/emoji/48/brick-emoji.png" alt="Brick" class="w-full h-full object-contain">
+                                </button>
+                                <button class="add-arrow w-12 h-9 bg-sky-100 hover:bg-sky-200 border border-sky-300 btn-side-arrow-clip active:scale-95 transition cursor-pointer" 
+                                        title="Add Process Arrow" data-card="${cIdx}" data-row="${rIdx}"></button>
+                            </div>
+                        `);
+                        $rowContainer.append($controlGroup);
+                    }
+
+                    $layerCard.append($rowContainer);
+                    $horizontalRowFlex.append($layerCard);
+
+                    if (card.rowPredictions && card.rowPredictions[rIdx] !== undefined) {
+                        const savedPredictionText = card.rowPredictions[rIdx];
+                        const $predictionCardMarkup = $(`
+                            <div class="w-72 bg-gradient-to-br from-amber-950 to-stone-900 rounded-xl p-4 text-white shadow-2xl border border-amber-800/60 flex flex-col justify-start space-y-2 max-h-[11rem] overflow-y-auto relative z-20">
+                                <span class="text-[10px] uppercase font-black tracking-widest text-amber-400">Predicted Behaviour</span>
+                                <p class="text-xs leading-relaxed text-amber-100/90 font-mono select-text whitespace-pre-wrap">${savedPredictionText || 'No analytical data entered.'}</p>
+                            </div>
+                        `);
+                        $horizontalRowFlex.append($predictionCardMarkup);
+                    }
+
+                    $boardWrapper.append($horizontalRowFlex);
+
+                    if (rIdx === totalRows - 1) {
+                        const $outsideFooter = $(`
+                            <div class="py-2 flex flex-col items-center justify-center gap-1.5 w-full relative z-40">
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-amber-900/60 text-center">Explore organization of one level deeper</span>
+                                <button class="add-row w-11 h-14 bg-amber-600 hover:bg-amber-700 btn-down-arrow-clip active:scale-95 transition cursor-pointer shadow-md" 
+                                        title="Explore organization of one level deeper" data-card="${cIdx}" data-row="${rIdx}"></button>
+                            </div>
+                        `);
+                        $boardWrapper.append($outsideFooter);
+                    }
+
+                    if (rIdx < totalRows - 1 && !isMinimized) {
+                        const interRowItems = card.interRows[rIdx] || [];
+                        const $interRowWrapper = $('<div></div>').addClass('flex items-center justify-center flex-wrap gap-4 w-full py-2 relative z-40');
+                        const parentRowUnits = card.matrixRows[rIdx] || [];
+
+                        interRowItems.forEach((interItem, interIdx) => {
+                            let dropdownOptionsMarkup = `<option value="">Dangling (Unconnected)</option>`;
+                            parentRowUnits.forEach((unit, uIdx) => {
+                                if (unit.type === 'rect' || unit.type === 'function') {
+                                    const isSelected = (interItem.connectedTo !== undefined && String(interItem.connectedTo) === String(uIdx)) ? 'selected' : '';
+                                    dropdownOptionsMarkup += `<option value="${uIdx}" ${isSelected}>Connect to: [${unit.text}]</option>`;
+                                }
+                            });
+
+                            $interRowWrapper.append(`
+                                <div class="flex flex-col items-center space-y-1.5 bg-white p-2 rounded-xl border border-amber-200 shadow-xs shrink-0" 
+                                     data-output-block="true" data-card="${cIdx}" data-interrow="${rIdx}" data-interidx="${interIdx}">
+                                    
+                                    <select class="thread-target-select text-[11px] font-medium bg-amber-50 border border-amber-200 text-amber-900 rounded px-1.5 py-0.5 max-w-[10rem] outline-none focus:border-amber-500 transition"
+                                            data-card="${cIdx}" data-interrow="${rIdx}" data-interidx="${interIdx}">
+                                        ${dropdownOptionsMarkup}
+                                    </select>
+
+                                    <div class="relative w-40 h-14 inline-block shrink-0 v-arrow-up-bg-clip">
+                                        <div class="absolute inset-0 bg-emerald-100/90 border border-emerald-300 z-10"></div>
+                                        <div class="absolute inset-0 z-20 flex items-end pb-2 justify-center">
+                                            <input type="text" value="${interItem.text}" 
+                                                   class="w-full text-center bg-transparent font-bold text-emerald-900 border-none outline-none px-3 focus:ring-0 text-xs"
+                                                   data-card="${cIdx}" data-interrow="${rIdx}" data-interidx="${interIdx}">
+                                        </div>
+                                    </div>
+                                </div>
+                            `);
+                        });
+
+                        $interRowWrapper.append(`
+                            <button class="add-output-arrow w-9 h-11 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 btn-up-arrow-clip active:scale-95 transition cursor-pointer self-center" 
+                                    title="Add Upward Output" data-card="${cIdx}" data-interrow="${rIdx}"></button>
+                        `);
+                        
+                        $boardWrapper.append($interRowWrapper);
+                    }
+                });
+
+                $hub.append($boardWrapper);
+            });
+
+            setTimeout(drawThreads, 50);
+        }
+
+        // --- PIPELINE HANDLERS AND RE-RENDER CONFIGURATIONS ---
+        $(document).ready(function() {
+            
+            renderDashboard();
+            $(window).on('resize scroll', drawThreads);
+
+            // Handle Localized Board Minimize Button Click Toggle States 
+            $('#boards-hub').on('click', '.toggle-card-minimize', function() {
+                const targetCardIdx = $(this).data('card');
+                dashboardCards[targetCardIdx].isMinimized = !dashboardCards[targetCardIdx].isMinimized;
+                renderDashboard();
+            });
+
+            // Global Master Action: Expand All dashboards instantly when triggered from header
+            $('#global-expand-all').on('click', function() {
+                dashboardCards.forEach(card => card.isMinimized = false);
+                renderDashboard();
+            });
+
+            // Handle Explore down arrow action -> Trigger Dialogue Prompt 
+            $('#boards-hub').on('click', '.add-row', function() {
+                const cIdx = $(this).data('card');
+                const rIdx = $(this).data('row');
+                
+                activeDialogContext = { card: cIdx, row: rIdx };
+
+                $('#modal-prediction-input').val('');
+                $('#prediction-modal').removeClass('hidden');
+                $('#modal-prediction-input').focus();
+            });
+
+            // Action Close Scenario A: Familiar selected (No Layer Expansion)
+            $('#submit-familiar-btn').on('click', function() {
+                if (!activeDialogContext) return;
+                const c = activeDialogContext.card;
+                const r = activeDialogContext.row;
+                const textVal = $('#modal-prediction-input').val();
+
+                dashboardCards[c].rowPredictions[r] = textVal; 
+                
+                $('#prediction-modal').addClass('hidden');
+                activeDialogContext = null;
+                renderDashboard();
+            });
+
+            // Action Close Scenario B: Unfamiliar selected (Execute Layer Expansion Setup)
+            $('#submit-unfamiliar-btn').on('click', function() {
+                if (!activeDialogContext) return;
+                const c = activeDialogContext.card;
+                const r = activeDialogContext.row;
+                const textVal = $('#modal-prediction-input').val();
+
+                dashboardCards[c].rowPredictions[r] = textVal;
+
+                dashboardCards[c].interRows.push([{ type: "up-arrow", text: "output", connectedTo: "" }]);
+                dashboardCards[c].matrixRows.push([{ type: "rect", text: "functional unit" }, { type: "arrow", text: "process" }]);
+                
+                $('#prediction-modal').addClass('hidden');
+                activeDialogContext = null;
+                renderDashboard();
+            });
+
+            // Handle Dropdown Target Selections
+            $('#boards-hub').on('change', '.thread-target-select', function() {
+                const c = $(this).data('card');
+                const r = $(this).data('interrow');
+                const i = $(this).data('interidx');
+                
+                dashboardCards[c].interRows[r][i].connectedTo = $(this).val();
+                drawThreads(); 
+            });
+
+            // Sync structural text changes maps
+            $('#boards-hub').on('keyup', 'input[type="text"]:not([data-interrow])', function() {
+                const c = $(this).data('card');
+                const r = $(this).data('row');
+                const b = $(this).data('block');
+                dashboardCards[c].matrixRows[r][b].text = $(this).val(); 
+                
+                $('.thread-target-select[data-card="'+c+'"][data-interrow="'+r+'"]').each(function() {
+                    const targetIdx = $(this).data('interidx');
+                    const currentVal = dashboardCards[c].interRows[r][targetIdx].connectedTo;
+                    
+                    let optionsHTML = `<option value="">Dangling (Unconnected)</option>`;
+                    dashboardCards[c].matrixRows[r].forEach((unit, uIdx) => {
+                        if (unit.type === 'rect' || unit.type === 'function') {
+                            const isSel = String(currentVal) === String(uIdx) ? 'selected' : '';
+                            optionsHTML += `<option value="${uIdx}" ${isSel}>Connect to: [${unit.text}]</option>`;
+                        }
+                    });
+                    $(this).html(optionsHTML);
+                });
+
+                setTimeout(drawThreads, 10);
+            });
+
+            $('#boards-hub').on('keyup', 'input[type="text"][data-interrow]', function() {
+                const c = $(this).data('card');
+                const r = $(this).data('interrow');
+                const i = $(this).data('interidx');
+                dashboardCards[c].interRows[r][i].text = $(this).val();
+            });
+
+            // Create Output Arrows
+            $('#boards-hub').on('click', '.add-output-arrow', function() {
+                const c = $(this).data('card');
+                const r = $(this).data('interrow');
+                dashboardCards[c].interRows[r].push({ type: "up-arrow", text: "output", connectedTo: "" });
+                renderDashboard();
+            });
+
+            // Create Bricks
+            $('#boards-hub').on('click', '.add-rect', function() {
+                const c = $(this).data('card');
+                const r = $(this).data('row');
+                dashboardCards[c].matrixRows[r].push({ type: "rect", text: "functional unit" });
+                renderDashboard();
+            });
+
+            // Create Processes
+            $('#boards-hub').on('click', '.add-arrow', function() {
+                const c = $(this).data('card');
+                const r = $(this).data('row');
+                dashboardCards[c].matrixRows[r].push({ type: "arrow", text: "process" });
+                renderDashboard();
+            });
+
+            // Create Master Standalone Cards Hub Blueprint Factories
+            $('#add-card-btn').on('click', function() {
+                dashboardCards.push({
+                    matrixRows: [ [ { type: "function", text: "Function" } ] ],
+                    interRows: [],
+                    rowPredictions: {},
+                    isMinimized: false
+                });
+                renderDashboard();
+            });
+        });
+    </script>
+</body>
+</html>
