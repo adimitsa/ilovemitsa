@@ -256,9 +256,23 @@
                     }
                     $layerCard.append($rowContainer);
                     $horizontalRowFlex.append($layerCard);
-                    if (card.rowPredictions && card.rowPredictions[rIdx] !== undefined) {
-                        $horizontalRowFlex.append($(`<div class="w-72 bg-gradient-to-br from-amber-950 to-stone-900 rounded-xl p-4 text-white shadow-2xl border border-amber-800/60 flex flex-col justify-start space-y-2 max-h-[11rem] overflow-y-auto relative z-20"><span class="text-[10px] uppercase font-black tracking-widest text-amber-400">Predicted Behaviour</span><p class="text-xs leading-relaxed text-amber-100/90 font-mono select-text whitespace-pre-wrap">${card.rowPredictions[rIdx] || 'No analytical data entered.'}</p></div>`));
-                    }
+					if (card.rowPredictions && card.rowPredictions[rIdx] !== undefined) {
+						const $predictionCard = $(`
+							<div class="w-72 bg-gradient-to-br from-amber-950 to-stone-900 rounded-xl p-4 text-white shadow-2xl border border-amber-800/60 flex flex-col justify-start space-y-2 max-h-[11rem] relative z-20">
+								<div class="flex justify-between items-center">
+									<span class="text-[10px] uppercase font-black tracking-widest text-amber-400">Predicted Behaviour</span>
+									<button class="edit-prediction-btn text-amber-500 hover:text-white transition cursor-pointer" 
+											data-card="${cIdx}" data-row="${rIdx}" title="Edit Prediction">
+										✏️
+									</button>
+								</div>
+								<div class="overflow-y-auto flex-1">
+									<p class="text-xs leading-relaxed text-amber-100/90 font-mono select-text whitespace-pre-wrap">${card.rowPredictions[rIdx]}</p>
+								</div>
+							</div>
+						`);
+						$horizontalRowFlex.append($predictionCard);
+					}
                     $boardWrapper.append($horizontalRowFlex);
                     if (rIdx === totalRows - 1) {
                         $boardWrapper.append($(`<div class="py-2 flex flex-col items-center justify-center gap-1.5 w-full relative z-40"><span class="text-[11px] font-bold uppercase tracking-wider text-gray-400 text-center">Explore organization of one level deeper</span><button class="add-row w-11 h-14 bg-gray-400 hover:bg-gray-500 btn-down-arrow-clip active:scale-95 transition cursor-pointer shadow-md" title="Explore organization of one level deeper" data-card="${cIdx}" data-row="${rIdx}"></button></div>`));
@@ -295,6 +309,19 @@
                 renderDashboard();
                 setTimeout(resizeAll, 0);
             });
+			$('#boards-hub').on('click', '.edit-prediction-btn', function() {
+				const cIdx = $(this).data('card');
+				const rIdx = $(this).data('row');
+				
+				// Set the context so the submit buttons know which row to update
+				activeDialogContext = { card: cIdx, row: rIdx };
+				
+				// Pre-fill the modal with current text
+				const currentText = dashboardCards[cIdx].rowPredictions[rIdx];
+				$('#modal-prediction-input').val(currentText).focus();
+				
+				$('#prediction-modal').removeClass('hidden');
+			});
             $('#global-expand-all').on('click', function() {
                 dashboardCards.forEach(card => card.isMinimized = false);
                 renderDashboard();
