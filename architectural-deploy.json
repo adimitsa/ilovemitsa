@@ -1,0 +1,27 @@
+{
+  "project": "Structure",
+  "exportedAt": "2026-06-02T20:18:48Z",
+  "dashboardCards": [
+    {
+      "cardIndex": 0,
+      "isMinimized": false,
+      "matrixRows": [
+        [
+          { "type": "function", "text": "Function" }
+        ],
+        [
+          { "type": "rect", "text": "functional unit" },
+          { "type": "arrow", "text": "process" }
+        ]
+      ],
+      "interRows": [
+        [
+          { "type": "up-arrow", "text": "output", "connectedTo": "0" }
+        ]
+      ],
+      "rowPredictions": {
+        "0": "Under peak traffic load, this block cascades updates downstream with a 15ms latency overhead."
+      }
+    }
+  ]
+}
